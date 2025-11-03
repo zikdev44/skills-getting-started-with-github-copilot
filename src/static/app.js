@@ -21,15 +21,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const spotsLeft = details.max_participants - details.participants.length;
 
         const participantsList = details.participants.length > 0
-          ? `
-            <div class="participants-section">
-              <h5>Current Participants:</h5>
-              <ul class="participants-list">
-                ${details.participants.map(participant => `<li>${participant}</li>`).join('')}
-              </ul>
-            </div>
-          `
-          : '<p class="no-participants">No participants yet</p>';
+            ? `
+              <div class="participants-section">
+                <h5>Current Participants:</h5>
+                <ul class="participants-list">
+                  ${details.participants.map(participant => `
+                    <li>
+                      <span class="participant-email">${participant}</span>
+                      <span class="delete-participant" title="Supprimer" data-activity="${name}" data-email="${participant}">&#128465;</span>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            `
+            : '<p class="no-participants">No participants yet</p>';
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
@@ -90,6 +95,39 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.className = "error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
+    }
+  });
+
+  // Gestion suppression participant
+  activitiesList.addEventListener("click", async (event) => {
+    if (event.target.classList.contains("delete-participant")) {
+      const activity = event.target.getAttribute("data-activity");
+      const email = event.target.getAttribute("data-email");
+      if (confirm(`Supprimer ${email} de ${activity} ?`)) {
+        try {
+          const response = await fetch(
+            `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`,
+            { method: "DELETE" }
+          );
+          const result = await response.json();
+          if (response.ok) {
+            messageDiv.textContent = result.message;
+            messageDiv.className = "success";
+            fetchActivities();
+          } else {
+            messageDiv.textContent = result.detail || "Erreur lors de la suppression";
+            messageDiv.className = "error";
+          }
+          messageDiv.classList.remove("hidden");
+          setTimeout(() => {
+            messageDiv.classList.add("hidden");
+          }, 5000);
+        } catch (error) {
+          messageDiv.textContent = "Erreur réseau lors de la suppression.";
+          messageDiv.className = "error";
+          messageDiv.classList.remove("hidden");
+        }
+      }
     }
   });
 
